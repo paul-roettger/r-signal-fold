@@ -5,7 +5,7 @@ fn main() {
 }
 
 
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq)]
 struct Signal<T,U>
 where T: Default + Clone,
       U: Default + Clone
@@ -13,7 +13,7 @@ where T: Default + Clone,
     pub v: Vec<Sample<T,U>>
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug, PartialEq)]
 struct Sample<T,U>
 where T: Default + Clone,
       U: Default + Clone
@@ -38,18 +38,6 @@ where T: Default + Clone + PartialOrd + Add<&'a T, Output = T> + Sub<&'a T, Outp
 
     fn fold_signal(&self, signalb: &Signal<T,U>, sample_time: &Self::TypeTime) -> Option<Signal<T,U>>{
         self.fold_signal(signalb, sample_time)
-    }
-}
-
-impl<'a,U> FoldableSignal for Signal<f64,U> 
-where
-    U: Default + Clone + Mul<Output = U> + From<u8> + Sum,
-    &'a U: Add<U,Output = U> + Sub<&'a U, Output = U> +'a
-{
-    type TypeTime = f64;
-
-    fn fold_signal(&self, signalb: &Signal<f64,U>, sample_time: &Self::TypeTime) -> Option<Signal<f64,U>>{
-        None
     }
 }
 
@@ -149,12 +137,44 @@ mod tests {
     use crate::Signal;
 
     #[test]
-    fn add() {
-        let signal = Signal::new( vec![1u32,2,3,4], vec![1.0f64,1.0,2.0,3.0]);
-
-        let signal_b = Signal::new(vec![0u32,1,2,3], vec![2.0f64,0.0,0.0,0.0]);
+    fn impuls_response() {
+        //Preparation
+        let signal = Signal::new( vec![0u32,1,2,3], vec![1.0f64,2.0,3.0,4.0]);
+        let signal_b = Signal::new(vec![0u32,1,2,3], vec![1.0f64,0.0,0.0,0.0]);
         let sample_time = 1;
+
+        //Calculation
         let signal_c = signal.fold_signal_internal(&signal_b, &sample_time).unwrap();
-        assert_eq!(1, 2);
+        
+        //Ceck
+        assert_eq!(signal_c, Signal::new( vec![0u32,1,2,3,4,5,6], vec![1.0f64,2.0,3.0,4.0,0.0,0.0,0.0]));
+    }
+
+    #[test]
+    fn impuls_response_timeshift() {
+        //Preparation
+        let signal = Signal::new( vec![0u32,1,2,3], vec![1.0f64,2.0,3.0,4.0]);
+        let signal_b = Signal::new(vec![1u32,2,3,4], vec![1.0f64,0.0,0.0,0.0]);
+        let sample_time = 1;
+
+        //Calculation
+        let signal_c = signal.fold_signal_internal(&signal_b, &sample_time).unwrap();
+        
+        //Ceck
+        assert_eq!(signal_c, Signal::new( vec![0u32,1,2,3,4,5,6,7], vec![0.0f64,1.0,2.0,3.0,4.0,0.0,0.0,0.0]));
+    }
+
+    #[test]
+    fn impuls_response_scaled() {
+        //Preparation
+        let signal = Signal::new( vec![0u32,1,2,3], vec![1.0f64,2.0,3.0,4.0]);
+        let signal_b = Signal::new(vec![1u32,2,3,4], vec![2.0f64,0.0,0.0,0.0]);
+        let sample_time = 1;
+
+        //Calculation
+        let signal_c = signal.fold_signal_internal(&signal_b, &sample_time).unwrap();
+        
+        //Ceck
+        assert_eq!(signal_c, Signal::new( vec![0u32,1,2,3,4,5,6,7], vec![0.0f64,2.0,4.0,6.0,8.0,0.0,0.0,0.0]));
     }
 }
