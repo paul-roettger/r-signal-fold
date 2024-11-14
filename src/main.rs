@@ -1,20 +1,9 @@
-use std::{iter::Sum, usize, ops::{Mul, Add, Sub, Div}, f64, convert::FloatToInt};
-#[macro_use] extern crate custom_derive;
-#[macro_use] extern crate newtype_derive;
-
+use std::{iter::Sum, usize, ops::{Mul, Add, Sub, Div}};
 
 fn main() {
     println!("Hello, world!");
 }
 
-
-custom_derive! {
-    #[derive(NewtypeFrom,
-        NewtypeAdd, NewtypeDiv, NewtypeMul, NewtypeSub,
-        NewtypeDeref, NewtypeDerefMut, NewtypeUpperExp
-        )]
-    pub struct F64T(f64);
-}
 
 #[derive(Default)]
 struct Signal<T,U>
@@ -81,10 +70,7 @@ where T: Default + Clone,
         }
     }
 
-    
-
-    
-    pub fn fold_signal<'a>(&'a self, signalb: &'a Signal<T,U>, sample_time: &'a T) -> Option<Signal<T,U>>
+    pub fn fold_signal_internal<'a>(&'a self, signalb: &'a Self, sample_time: &'a T) -> Option<Self>
     where T: PartialOrd + Add<&'a T, Output = T> + Sub<&'a T, Output = T> + Div<Output=T> + Mul<&'a T, Output = T>  + TryInto<U> + TryInto<usize> + TryFrom<usize>  + From<u8> + 'a,
           U: Mul<Output = U> + From<u8> + Sum,
           &'a T: Sub<&'a T, Output = T> + Mul<&'a T, Output = T> + 'a,
@@ -94,33 +80,33 @@ where T: Default + Clone,
         let t_min_siga = &self.v.first()?.t;
         let t_min_sigb = &signalb.v.first()?.t;
 
-        if *sample_time == 0_u8.into(){
+        if *sample_time <= 0_u8.into(){
             return None;
         }
 
         let sig_a;
         let sig_b;
+        let len_diff;
         if t_min_siga > t_min_sigb
         {
-            let len_diff = ((t_min_siga - t_min_sigb)/(sample_time.clone())).try_into().ok()?;
+            len_diff = ((t_min_siga - t_min_sigb)/(sample_time.clone())).try_into().ok()?;
             sig_a = [vec![0_u8.into();len_diff],self.resample(sample_time)].concat();
-            sig_b = [signalb.resample(sample_time), vec![0_u8.into();sig_a.len()-len_diff]].concat();
+            sig_b = [vec![0_u8.into();sig_a.len() - 1], signalb.resample(sample_time)].concat();
 
         }else{
-            let len_diff = ((t_min_sigb - t_min_siga)/(sample_time.clone())).try_into().ok()?;
+            len_diff = ((t_min_sigb - t_min_siga)/(sample_time.clone())).try_into().ok()?;
             sig_a = self.resample(sample_time);
-            sig_b = [vec![0_u8.into();len_diff], signalb.resample(sample_time), vec![0_u8.into();sig_a.len()]].concat();
+            sig_b = [vec![0_u8.into();len_diff + sig_a.len() - 1], signalb.resample(sample_time)].concat();
         }
         
+        let len_result = sig_b.len();
         let len_a = sig_a.len();
-        let len_result = len_a+sig_b.len()-1;
         let mut result = vec![0_u8.into(); len_result];
 
 
         for (index, sample) in result.iter_mut().enumerate(){
-
             *sample = sig_a.iter()
-                        .zip(sig_b.iter().rev().skip(len_result-index).take(len_a))
+                        .zip(sig_b.iter().skip(index).take(len_a).rev())
                         .map(|(a,b)| a.clone()*b.clone()).sum();
 
         }
@@ -153,60 +139,22 @@ where T: Default + Clone,
         result
     }
 
-
-
-
 }
 
 
-
-fn fold_signal(signala: &Vec<f64>, signalb: &Vec<f64>) -> Vec<f64>
-{
-
-    let len_a = signala.len();
-    let len_b = signalb.len();
-    let len_result = len_a+len_b-1;
-    let mut result = vec![0.0; len_result];
-
-
-     for (index, sample) in result.iter_mut().enumerate(){
-
-        *sample = signala.iter()
-                    .zip([signalb.to_vec(), vec![0.0; len_a]].concat().iter().rev().skip(len_result-index).take(len_a))
-                    .map(|(a,b)| *a*(*b)).sum();
-
-    }
-
-    result
-}
 
 
 #[cfg(test)]
 mod tests {
-    use crate::{fold_signal, Signal};
-    use std::iter;
+    use crate::Signal;
 
     #[test]
     fn add() {
-        let signal = Signal::new(vec![0.0,1.0,2.0,3.0], vec![1,2,3,4]);
+        let signal = Signal::new( vec![1u32,2,3,4], vec![1.0f64,1.0,2.0,3.0]);
 
-        let signal_b = Signal::new(vec![5.0,6.0,7.0,8.0], vec![1,0,0,0]);
-
-        let signal_c = signal.fold_signal(&signal_b, &1.0).unwrap();
-
+        let signal_b = Signal::new(vec![0u32,1,2,3], vec![2.0f64,0.0,0.0,0.0]);
+        let sample_time = 1;
+        let signal_c = signal.fold_signal_internal(&signal_b, &sample_time).unwrap();
         assert_eq!(1, 2);
     }
-
-    #[test]
-    fn fold(){
-
-        let a = vec![1.0,0.0,1.0];
-        let b = vec![1.0,2.0,3.0,4.0,5.0];
-
-        let c = fold_signal(&a, &b);
-
-        assert_eq!(b, c);
-    }
-
-
 }
