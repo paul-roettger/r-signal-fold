@@ -4,7 +4,6 @@ fn main() {
     println!("Hello, world!");
 }
 
-
 #[derive(Default, Debug, PartialEq)]
 struct Signal<T,U>
 where T: Default + Clone,
@@ -22,26 +21,6 @@ where T: Default + Clone,
     pub x: U
 }
 
-trait FoldableSignal{
-    type TypeTime;
-    fn fold_signal<'a>(&'a self, signalb: &'a Self, sample_time: &'a Self::TypeTime) -> Option<Self> where Self: Sized;
-}
-
-
-impl<'a,T,U> FoldableSignal for Signal<T,U> 
-where T: Default + Clone + PartialOrd + Add<&'a T, Output = T> + Sub<&'a T, Output = T> + Div<Output=T> + Mul<&'a T, Output = T>  + TryInto<U> + TryInto<usize> + TryFrom<usize>  + From<u8> + 'a,
-          U: Default + Clone + Mul<Output = U> + From<u8> + Sum,
-          &'a T: Sub<&'a T, Output = T> + Mul<&'a T, Output = T> + 'a,
-          &'a U: Add<U,Output = U> + Sub<&'a U, Output = U> +'a
-{
-    type TypeTime = T;
-
-    fn fold_signal(&self, signalb: &Signal<T,U>, sample_time: &Self::TypeTime) -> Option<Signal<T,U>>{
-        self.fold_signal(signalb, sample_time)
-    }
-}
-
-
 impl<T,U> Signal<T,U>
 where T: Default + Clone,
       U: Default + Clone
@@ -58,7 +37,7 @@ where T: Default + Clone,
         }
     }
 
-    pub fn fold_signal_internal<'a>(&'a self, signalb: &'a Self, sample_time: &'a T) -> Option<Self>
+    pub fn fold_signal<'a>(&'a self, signalb: &'a Self, sample_time: &'a T) -> Option<Self>
     where T: PartialOrd + Add<&'a T, Output = T> + Sub<&'a T, Output = T> + Div<Output=T> + Mul<&'a T, Output = T>  + TryInto<U> + TryInto<usize> + TryFrom<usize>  + From<u8> + 'a,
           U: Mul<Output = U> + From<u8> + Sum,
           &'a T: Sub<&'a T, Output = T> + Mul<&'a T, Output = T> + 'a,
@@ -144,7 +123,7 @@ mod tests {
         let sample_time = 1;
 
         //Calculation
-        let signal_c = signal.fold_signal_internal(&signal_b, &sample_time).unwrap();
+        let signal_c = signal.fold_signal(&signal_b, &sample_time).unwrap();
         
         //Ceck
         assert_eq!(signal_c, Signal::new( vec![0u32,1,2,3,4,5,6], vec![1.0f64,2.0,3.0,4.0,0.0,0.0,0.0]));
@@ -158,7 +137,7 @@ mod tests {
         let sample_time = 1;
 
         //Calculation
-        let signal_c = signal.fold_signal_internal(&signal_b, &sample_time).unwrap();
+        let signal_c = signal.fold_signal(&signal_b, &sample_time).unwrap();
         
         //Ceck
         assert_eq!(signal_c, Signal::new( vec![0u32,1,2,3,4,5,6,7], vec![0.0f64,1.0,2.0,3.0,4.0,0.0,0.0,0.0]));
@@ -172,7 +151,7 @@ mod tests {
         let sample_time = 1;
 
         //Calculation
-        let signal_c = signal.fold_signal_internal(&signal_b, &sample_time).unwrap();
+        let signal_c = signal.fold_signal(&signal_b, &sample_time).unwrap();
         
         //Ceck
         assert_eq!(signal_c, Signal::new( vec![0u32,1,2,3,4,5,6,7], vec![0.0f64,2.0,4.0,6.0,8.0,0.0,0.0,0.0]));
