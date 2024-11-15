@@ -35,8 +35,8 @@ where T: Default + Clone,
                                                     x:(*x_val).clone()}
                 ).collect()
         }
-    }
-
+    }    
+    
     pub fn fold_signal<'a>(&'a self, signalb: &'a Self, sample_time: &'a T) -> Option<Self>
     where T: PartialOrd + Add<&'a T, Output = T> + Sub<&'a T, Output = T> + Div<Output=T> + Mul<&'a T, Output = T>  + TryInto<U> + TryInto<usize> + TryFrom<usize>  + From<u8> + 'a,
           U: Mul<Output = U> + From<u8> + Sum,
