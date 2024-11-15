@@ -63,13 +63,13 @@ where T: Default + Clone,
         if t_min_siga > t_min_sigb
         {
             len_diff = ((t_min_siga - t_min_sigb)/(sample_time.clone())).try_into().ok()?;
-            sig_a = [vec![0_u8.into();len_diff],self.resample(sample_time)].concat();
-            sig_b = [vec![0_u8.into();sig_a.len() - 1], signalb.resample(sample_time)].concat();
+            sig_a = [vec![0_u8.into();len_diff],self.resample(sample_time)?].concat();
+            sig_b = [vec![0_u8.into();sig_a.len() - 1], signalb.resample(sample_time)?].concat();
 
         }else{
             len_diff = ((t_min_sigb - t_min_siga)/(sample_time.clone())).try_into().ok()?;
-            sig_a = self.resample(sample_time);
-            sig_b = [vec![0_u8.into();len_diff + sig_a.len() - 1], signalb.resample(sample_time)].concat();
+            sig_a = self.resample(sample_time)?;
+            sig_b = [vec![0_u8.into();len_diff + sig_a.len() - 1], signalb.resample(sample_time)?].concat();
         }
         
         /* Generate an vector for the results */
@@ -96,13 +96,13 @@ where T: Default + Clone,
     }
         
     /* Resample a signal with a given sampletime */
-    fn resample<'a>(&'a self, sampletime: &'a T) -> Vec<U>
+    fn resample<'a>(&'a self, sampletime: &'a T) -> Option<Vec<U>>
     where T:      PartialOrd + Add<&'a T, Output = T> + Sub<&'a T, Output = T> + Div<Output=T> + TryInto<U> +'a,
               U:      Mul<Output = U> + From<u8>,
               &'a T: Sub<&'a T, Output = T> + 'a,
               &'a U: Add<U,Output = U> + Sub<&'a U, Output = U> + 'a
     {
-        let first_sample = match self.v.first() {Some(s) => s, _ => return Vec::new()};
+        let first_sample = match self.v.first() {Some(s) => s, _ => return None};
 
         let mut result = Vec::new();
         result.push(first_sample.x.clone());
@@ -114,11 +114,12 @@ where T: Default + Clone,
                 let new_x = &self.v[i-1].x +
                                    (&self.v[i].x-&self.v[i-1].x) *
                                     (((new_t.clone()-&self.v[i-1].t))/(&self.v[i].t-&self.v[i-1].t))
-                                    .try_into().unwrap_or(1_u8.into());
+                                    .try_into()
+                                    .ok()?;
                 result.push(new_x);
             }
         }
-        result
+        Some(result)
     }
 
 }
