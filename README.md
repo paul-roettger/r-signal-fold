@@ -7,7 +7,7 @@ This operation can be used to simulate the output of a linear time-invariant sys
 ## Run from Source
 
 ```bash
-git clone https://github.com/paul-roettger/rust-signal-fold.git
-cd rust-signal-fold
+git clone https://github.com/paul-roettger/r-signal-fold.git
+cd r-signal-fold
 cargo test
 ```
