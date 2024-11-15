@@ -75,6 +75,7 @@ where T: Default + Clone,
         /* Generate an vector for the results */
         let len_result = sig_b.len();
         let len_a = sig_a.len();
+        let t_min_result = if t_min_siga < t_min_sigb {t_min_siga} else {t_min_sigb};
         let mut result = vec![0_u8.into(); len_result];
 
         /* Perfor the signal fold */
@@ -89,7 +90,7 @@ where T: Default + Clone,
 		/* Generate time signal and return result */
         Some(Signal::new((0..len_result).into_iter()
                                                      .map(|i| 
-                                                             match T::try_from(i){ Ok(i_ok) => i_ok*sample_time,
+                                                             match T::try_from(i){ Ok(i_ok) => (i_ok*sample_time) + t_min_result,
                                                                                                        _ => 0_u8.into()})
                                                      .collect(),
             result))
